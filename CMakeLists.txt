@@ -3,7 +3,7 @@ project(projections C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(projections main.c matrix.h matrix.c projections.c projections.h)
+add_executable(projections main.c projections.c projections.h draw.c draw.h debug.h rendering.c rendering.h events.c events.h processing.c processing.h)
 
 include_directories(/usr/local/lib)
 include_directories(/usr/local/include)

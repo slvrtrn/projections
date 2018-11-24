@@ -3,8 +3,17 @@
 #ifndef PROJECTIONS_PROJECTIONS_H
 #define PROJECTIONS_PROJECTIONS_H
 
-void point_to_matrix(const int point[3], double result[3][1]);
+#include <stdbool.h>
 
-void rotation(double angle, double rotated_points[4][2]);
+typedef struct {
+  double x_angle;
+  double y_angle;
+  double z_angle;
+  double init_pts[8][3];
+  double current_pts[8][3];
+  double distance;
+} rotation_params_t;
+
+void rotation(rotation_params_t *params);
 
 #endif //PROJECTIONS_PROJECTIONS_H

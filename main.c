@@ -1,116 +1,48 @@
 #include <stdio.h>
-#include "matrix.h"
-#include <math.h>
 #include <SDL2/SDL.h>
 #include "projections.h"
+#include "draw.h"
+#include "rendering.h"
+#include "events.h"
+#include "processing.h"
+
 
 int main() {
 
-  int is_running;
-  const int fps = 60;
-  const uint32_t max_frame_time = (uint32_t) 1000 / fps;
+  int is_running = 0;
 
-  uint32_t frame_time;
-  uint32_t frame_start;
+  double pts[8][3] = {
+    {-0.5, -0.5, 0.5},
+    {0.5,  -0.5, 0.5},
+    {0.5,  0.5,  0.5},
+    {-0.5, 0.5,  0.5},
+    {-0.5, -0.5, -0.5},
+    {0.5,  -0.5, -0.5},
+    {0.5,  0.5,  -0.5},
+    {-0.5, 0.5,  -0.5}
+  };
 
-  SDL_Event event;
-  SDL_Window *window;
-  SDL_Renderer *renderer;
-  SDL_GLContext *ctx;
-
-  if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-    printf("Failed to init SDL: %s", SDL_GetError());
-  }
-
-  window = SDL_CreateWindow("HelloWorld!", 0, 0, 800, 600, SDL_WINDOW_SHOWN);
-  if (window == NULL) {
-    printf("Failed to init SDL Window: %s", SDL_GetError());
-    SDL_Quit();
+  sdl_rendering_t *sdl = init(800, 600);
+  if (sdl != NULL) {
+    is_running = 1;
+  } else {
+    printf("Failed to init SDL, will now quit...\n");
     return 0;
   }
 
-  ctx = SDL_GL_CreateContext(window);
-  if (ctx == NULL) {
-    printf("Failed to init SDL GLContext: %s", SDL_GetError());
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    return 0;
-  }
+  events_state_t *state = malloc(sizeof(events_state_t));
+  rotation_params_t *params = malloc(sizeof(rotation_params_t));
+  memcpy(params->init_pts, pts, sizeof(params->init_pts));
 
-#ifdef __APPLE__
-  // MacOSX Mojave hack to display window contents immediately
-  SDL_PumpEvents();
-#endif
-
-  renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-  if (renderer == NULL) {
-    printf("Failed to init SDL Renderer: %s", SDL_GetError());
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    return 0;
-  }
-
-  is_running = 1;
-
-  double rotated_points[4][2];
-  double angle = 90;
-
-  int cx = 400;
-  int cy = 300;
+  init_params(params);
+  init_events_state(state);
 
   while (is_running != 0) {
-    if (SDL_PollEvent(&event) != 0) {
-      switch (event.type) {
-        case SDL_QUIT:
-          printf("Will now quit...\n");
-          is_running = 0;
-          break;
-        default:
-          break;
-      }
-    }
-
-    frame_start = SDL_GetTicks();
-
-    if (++angle > 360) {
-      angle = 0;
-    }
-    rotation(angle, rotated_points);
-
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(renderer);
-
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-    SDL_RenderDrawLine(renderer,
-                       cx + (int) rotated_points[0][0],
-                       cy + (int) rotated_points[0][1],
-                       cx + (int) rotated_points[1][0],
-                       cy + (int) rotated_points[1][1]);
-    SDL_RenderDrawLine(renderer,
-                       cx + (int) rotated_points[1][0],
-                       cy + (int) rotated_points[1][1],
-                       cx + (int) rotated_points[2][0],
-                       cy + (int) rotated_points[2][1]);
-    SDL_RenderDrawLine(renderer,
-                       cx + (int) rotated_points[2][0],
-                       cy + (int) rotated_points[2][1],
-                       cx + (int) rotated_points[3][0],
-                       cy + (int) rotated_points[3][1]);
-    SDL_RenderDrawLine(renderer,
-                       cx + (int) rotated_points[3][0],
-                       cy + (int) rotated_points[3][1],
-                       cx + (int) rotated_points[0][0],
-                       cy + (int) rotated_points[0][1]);
-    SDL_RenderPresent(renderer);
-
-    frame_time = SDL_GetTicks() - frame_start;
-    printf("Frame time: %d\n", frame_time);
-    if (max_frame_time > frame_time) {
-      SDL_Delay(max_frame_time - frame_time);
-    }
+    process_frame_logic(sdl, &is_running, state, params);
+    delay_frame(sdl);
   }
 
+  shutdown(sdl);
   return 0;
 }
 

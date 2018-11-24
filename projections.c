@@ -1,51 +1,65 @@
 #include <stdlib.h>
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 #include "projections.h"
-#include "matrix.h"
+#include "debug.h"
 
-void point_to_matrix(const int point[3], double result[3][1]) {
-  result[0][0] = point[0];
-  result[1][0] = point[1];
-  result[3][0] = point[2];
+#define RADS_COEFF 2 * M_PI / 360
+
+void rotate_x(double angle, double pt[3]) {
+  double y = pt[1];
+  double z = pt[2];
+  pt[1] = y * cos(angle) - z * sin(angle);
+  pt[2] = y * sin(angle) + z * cos(angle);
 }
 
-void rotation(double angle, double rotated_points[4][2]) {
+void rotate_y(double angle, double pt[3]) {
+  double x = pt[0];
+  double z = pt[2];
+  pt[0] = x * cos(angle) + z * sin(angle);
+  pt[2] = z * cos(angle) - x * sin(angle);
+}
 
-  int points[4][3] = {
-    {-50, -50, 0},
-    {50,  -50, 0},
-    {50,  50,  0},
-    {-50, 50,  0}
-  };
+void rotate_z(double angle, double pt[3]) {
+  double x = pt[0];
+  double y = pt[1];
+  pt[0] = x * cos(angle) - y * sin(angle);
+  pt[1] = x * sin(angle) + y * cos(angle);
+}
 
-  angle = angle * 2 * M_PI / 360;
+void project(double distance, double pt[3]) {
+  double z = 1 / (distance - pt[2] / 2);
+  pt[0] = pt[0] * z;
+  pt[1] = pt[1] * z;
+}
 
-  double projection[2][3] = {
-    {1, 0, 0},
-    {0, 1, 0}
-  };
+void rotation(rotation_params_t *params) {
 
-  double rotation[2][3] = {
-    {cos(angle), -sin(angle), 0},
-    {sin(angle), cos(angle),  0}
-  };
+  memcpy(params->current_pts, params->init_pts, sizeof(params->init_pts));
 
-  for (size_t i = 0; i < 4; i++) {
-    double projected[2][1];
-    double rotated[2][1];
-    double point_matrix[3][1];
+  double x_angle_rads = params->x_angle * RADS_COEFF;
+  double y_angle_rads = params->y_angle * RADS_COEFF;
+  double z_angle_rads = params->z_angle * RADS_COEFF;
 
-    point_to_matrix(points[i], point_matrix);
-    multiply(2, 3, 1, projection, point_matrix, projected);
-    multiply(2, 3, 1, rotation, point_matrix, rotated);
+  for (size_t i = 0; i < 8; i++) {
 
-    printf("Projected: %f %f\n", projected[0][0], projected[1][0]);
-    printf("Rotated: %f %f\n", rotated[0][0], rotated[1][0]);
-    printf("--------------\n");
+    rotate_x(x_angle_rads, params->current_pts[i]);
+    rotate_y(y_angle_rads, params->current_pts[i]);
+    rotate_z(z_angle_rads, params->current_pts[i]);
 
-    rotated_points[i][0] = rotated[0][0];
-    rotated_points[i][1] = rotated[1][0];
+#if DEBUG
+    printf("Angles: %f %f %f, Rotated: %f %f %f\n",
+           params->x_angle, params->y_angle, params->z_angle,
+           (params->current_pts[i])[0], (params->current_pts[i])[1], (params->current_pts[i])[2]);
+#endif
+
+    project(params->distance, params->current_pts[i]);
+
+#if DEBUG
+    printf("Angles: %f %f %f, Projected: %f %f %f\n",
+           params->x_angle, params->y_angle, params->z_angle,
+           (params->current_pts[i])[0], (params->current_pts[i])[1], (params->current_pts[i])[2]);
+#endif
   }
-
 }
